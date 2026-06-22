@@ -393,6 +393,9 @@ function App() {
   const [benchedPlayerIds, setBenchedPlayerIds] = useState<string[]>(
     initialState.benchedPlayerIds,
   );
+  const [benchAssignmentTargets, setBenchAssignmentTargets] = useState<
+    Record<string, string>
+  >({});
   const [shareUrl, setShareUrl] = useState(() => window.location.href);
   const [copyMessage, setCopyMessage] = useState("");
   const [exportMessage, setExportMessage] = useState("");
@@ -488,6 +491,19 @@ function App() {
       return updated;
     });
     setBenchedPlayerIds((current) => current.filter((id) => id !== playerId));
+    setBenchAssignmentTargets((current) => {
+      const next = { ...current };
+      delete next[playerId];
+      return next;
+    });
+  }
+
+  function preferredAssignmentCode(player: Player): string {
+    if (slotCodes.includes(player.primaryPosition)) {
+      return player.primaryPosition;
+    }
+
+    return slotCodes[0] ?? "GK";
   }
 
   function assignPlayer(playerId: string, slotCode: string) {
@@ -658,7 +674,7 @@ function App() {
             onChange={(event) => setAssignmentPlayerId(event.target.value)}
           >
             <option value="">Select player</option>
-            {players.map((player) => (
+            {players.toSorted().map((player) => (
               <option key={player.id} value={player.id}>
                 {player.name}
               </option>
@@ -689,7 +705,7 @@ function App() {
             </p>
           ) : (
             <ul className="player-list">
-              {players.map((player) => (
+              {players.toSorted().map((player) => (
                 <li key={player.id}>
                   <div>
                     <strong>{player.name}</strong>
@@ -816,9 +832,44 @@ function App() {
             </p>
           ) : (
             <ul className="bench-list">
-              {lineup.bench.map((player) => (
-                <li key={player.id}>{player.name}</li>
-              ))}
+              {lineup.bench.map((player) => {
+                const selectedSlot = slotCodes.includes(
+                  benchAssignmentTargets[player.id] ?? "",
+                )
+                  ? (benchAssignmentTargets[player.id] as string)
+                  : preferredAssignmentCode(player);
+
+                return (
+                  <li key={player.id}>
+                    <span className="bench-player-name">{player.name}</span>
+                    <div className="bench-assign-row">
+                      <select
+                        aria-label={`Assign ${player.name} to position`}
+                        value={selectedSlot}
+                        onChange={(event) => {
+                          const nextSlot = event.target.value;
+                          setBenchAssignmentTargets((current) => ({
+                            ...current,
+                            [player.id]: nextSlot,
+                          }));
+                        }}
+                      >
+                        {slotCodes.map((position) => (
+                          <option key={position} value={position}>
+                            {position}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => assignPlayer(player.id, selectedSlot)}
+                      >
+                        Assign
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

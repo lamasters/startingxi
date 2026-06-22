@@ -229,6 +229,7 @@ button.danger {
   aspect-ratio: 3 / 2;
   border-radius: 22px;
   overflow: hidden;
+  isolation: isolate;
   border: 3px solid #eff8ec;
   background:
     repeating-linear-gradient(
@@ -281,6 +282,7 @@ button.danger {
 .position-node {
   position: absolute;
   transform: translate(-50%, -50%);
+  z-index: 1;
   width: min(135px, 31vw);
   background: rgba(10, 25, 15, 0.56);
   border: 1px solid rgba(255, 255, 255, 0.34);
@@ -353,7 +355,7 @@ button.danger {
   transition:
     opacity 140ms ease,
     transform 140ms ease;
-  z-index: 5;
+  z-index: 999;
 }
 
 .player-tooltip::after {
@@ -370,6 +372,11 @@ button.danger {
 .player-name:focus + .player-tooltip {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.position-node:hover,
+.position-node:focus-within {
+  z-index: 100;
 }
 
 .position-node li button {
@@ -397,16 +404,27 @@ button.danger {
 }
 
 .bench-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  display: grid;
+  gap: 0.5rem;
 }
 
 .bench-list li {
   border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.22rem 0.65rem;
+  border-radius: 12px;
+  padding: 0.45rem;
   background: #f6fcf4;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.bench-player-name {
+  font-weight: 600;
+}
+
+.bench-assign-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto;
+  gap: 0.35rem;
 }
 
 .empty-note {
@@ -482,6 +500,10 @@ button.danger {
   }
 
   .share-row {
+    grid-template-columns: 1fr;
+  }
+
+  .bench-assign-row {
     grid-template-columns: 1fr;
   }
 
