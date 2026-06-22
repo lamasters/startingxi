@@ -572,7 +572,7 @@ function App() {
   return (
     <main className="app-shell">
       <section className="control-panel">
-        <h1>Soccer Lineup Builder</h1>
+        <h1>Starting XI</h1>
         <p className="subtitle">
           Pick your formation, add your squad, then let automatic matching place
           players by primary and preferred positions.

@@ -1,4 +1,4 @@
-# Soccer Lineup Builder
+# Starting XI
 
 A browser-based soccer lineup manager built with React, TypeScript, and Vite.
 
