@@ -674,11 +674,13 @@ function App() {
             onChange={(event) => setAssignmentPlayerId(event.target.value)}
           >
             <option value="">Select player</option>
-            {players.toSorted().map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name}
-              </option>
-            ))}
+            {players
+              .toSorted((a, b) => a.name.localeCompare(b.name))
+              .map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name}
+                </option>
+              ))}
           </select>
 
           <label htmlFor="assign-position">Position</label>
@@ -705,63 +707,65 @@ function App() {
             </p>
           ) : (
             <ul className="player-list">
-              {players.toSorted().map((player) => (
-                <li key={player.id}>
-                  <div>
-                    <strong>{player.name}</strong>
-                    <span>Primary: {player.primaryPosition}</span>
-                    <span>
-                      Preferred:{" "}
-                      {player.preferredPositions.length > 0
-                        ? player.preferredPositions.join(", ")
-                        : "None"}
-                    </span>
-                  </div>
-                  <div className="row-actions">
-                    <select
-                      value={
-                        slotCodes.includes(player.primaryPosition)
-                          ? player.primaryPosition
-                          : slotCodes[0]
-                      }
-                      onChange={(event) => {
-                        const nextPosition = event.target.value;
-                        setPlayers((current) =>
-                          current.map((item) =>
-                            item.id === player.id
-                              ? {
-                                  ...item,
-                                  primaryPosition: nextPosition,
-                                }
-                              : item,
-                          ),
-                        );
-                      }}
-                    >
-                      {slotCodes.map((position) => (
-                        <option key={position} value={position}>
-                          {position}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        assignPlayer(player.id, player.primaryPosition)
-                      }
-                    >
-                      Assign
-                    </button>
-                    <button
-                      type="button"
-                      className="danger"
-                      onClick={() => removePlayer(player.id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
+              {players
+                .toSorted((a, b) => a.name.localeCompare(b.name))
+                .map((player) => (
+                  <li key={player.id}>
+                    <div>
+                      <strong>{player.name}</strong>
+                      <span>Primary: {player.primaryPosition}</span>
+                      <span>
+                        Preferred:{" "}
+                        {player.preferredPositions.length > 0
+                          ? player.preferredPositions.join(", ")
+                          : "None"}
+                      </span>
+                    </div>
+                    <div className="row-actions">
+                      <select
+                        value={
+                          slotCodes.includes(player.primaryPosition)
+                            ? player.primaryPosition
+                            : slotCodes[0]
+                        }
+                        onChange={(event) => {
+                          const nextPosition = event.target.value;
+                          setPlayers((current) =>
+                            current.map((item) =>
+                              item.id === player.id
+                                ? {
+                                    ...item,
+                                    primaryPosition: nextPosition,
+                                  }
+                                : item,
+                            ),
+                          );
+                        }}
+                      >
+                        {slotCodes.map((position) => (
+                          <option key={position} value={position}>
+                            {position}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          assignPlayer(player.id, player.primaryPosition)
+                        }
+                      >
+                        Assign
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => removePlayer(player.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
             </ul>
           )}
         </div>
@@ -832,44 +836,46 @@ function App() {
             </p>
           ) : (
             <ul className="bench-list">
-              {lineup.bench.map((player) => {
-                const selectedSlot = slotCodes.includes(
-                  benchAssignmentTargets[player.id] ?? "",
-                )
-                  ? (benchAssignmentTargets[player.id] as string)
-                  : preferredAssignmentCode(player);
+              {lineup.bench
+                .toSorted((a, b) => a.name.localeCompare(b.name))
+                .map((player) => {
+                  const selectedSlot = slotCodes.includes(
+                    benchAssignmentTargets[player.id] ?? "",
+                  )
+                    ? (benchAssignmentTargets[player.id] as string)
+                    : preferredAssignmentCode(player);
 
-                return (
-                  <li key={player.id}>
-                    <span className="bench-player-name">{player.name}</span>
-                    <div className="bench-assign-row">
-                      <select
-                        aria-label={`Assign ${player.name} to position`}
-                        value={selectedSlot}
-                        onChange={(event) => {
-                          const nextSlot = event.target.value;
-                          setBenchAssignmentTargets((current) => ({
-                            ...current,
-                            [player.id]: nextSlot,
-                          }));
-                        }}
-                      >
-                        {slotCodes.map((position) => (
-                          <option key={position} value={position}>
-                            {position}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => assignPlayer(player.id, selectedSlot)}
-                      >
-                        Assign
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
+                  return (
+                    <li key={player.id}>
+                      <span className="bench-player-name">{player.name}</span>
+                      <div className="bench-assign-row">
+                        <select
+                          aria-label={`Assign ${player.name} to position`}
+                          value={selectedSlot}
+                          onChange={(event) => {
+                            const nextSlot = event.target.value;
+                            setBenchAssignmentTargets((current) => ({
+                              ...current,
+                              [player.id]: nextSlot,
+                            }));
+                          }}
+                        >
+                          {slotCodes.map((position) => (
+                            <option key={position} value={position}>
+                              {position}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => assignPlayer(player.id, selectedSlot)}
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
             </ul>
           )}
         </div>
