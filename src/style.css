@@ -434,7 +434,8 @@ button.danger {
   }
 
   .position-node {
-    width: min(122px, 38vw);
+    width: clamp(78px, 16vw, 108px);
+    max-width: 19%;
   }
 
   .pitch-toolbar,
@@ -455,7 +456,8 @@ button.danger {
   }
 
   .position-node {
-    width: min(112px, 44vw);
+    width: clamp(66px, 18vw, 84px);
+    max-width: 18.5%;
     padding: 0.28rem;
   }
 
