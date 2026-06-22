@@ -571,13 +571,15 @@ function App() {
 
   return (
     <main className="app-shell">
-      <section className="control-panel">
+      <div className="app-heading">
         <h1>Starting XI</h1>
         <p className="subtitle">
           Pick your formation, add your squad, then let automatic matching place
           players by primary and preferred positions.
         </p>
+      </div>
 
+      <section className="control-panel">
         <div className="card">
           <label htmlFor="formation">Formation</label>
           <select
@@ -750,23 +752,6 @@ function App() {
       </section>
 
       <section className="pitch-panel">
-        <div className="pitch-toolbar card">
-          <div>
-            <h2>Export lineup</h2>
-            <p className="copy-note">
-              Save the current pitch and bench as a PNG.
-            </p>
-          </div>
-          <div className="pitch-toolbar-actions">
-            <button type="button" onClick={exportLineupAsPng}>
-              {isExporting ? "Exporting..." : "Export PNG"}
-            </button>
-            {exportMessage ? (
-              <p className="copy-note export-note">{exportMessage}</p>
-            ) : null}
-          </div>
-        </div>
-
         <div
           ref={exportRef}
           className={`export-surface${isExporting ? " is-exporting" : ""}`}
@@ -822,20 +807,36 @@ function App() {
               );
             })}
           </div>
+        </div>
+        <div className="bench card export-hidden">
+          <h2>Bench / Unmatched</h2>
+          {lineup.bench.length === 0 ? (
+            <p className="empty-note">
+              All players are matched to at least one position.
+            </p>
+          ) : (
+            <ul className="bench-list">
+              {lineup.bench.map((player) => (
+                <li key={player.id}>{player.name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-          <div className="bench card export-hidden">
-            <h2>Bench / Unmatched</h2>
-            {lineup.bench.length === 0 ? (
-              <p className="empty-note">
-                All players are matched to at least one position.
-              </p>
-            ) : (
-              <ul className="bench-list">
-                {lineup.bench.map((player) => (
-                  <li key={player.id}>{player.name}</li>
-                ))}
-              </ul>
-            )}
+        <div className="pitch-toolbar card">
+          <div>
+            <h2>Export lineup</h2>
+            <p className="copy-note">
+              Save the current pitch and bench as a PNG.
+            </p>
+          </div>
+          <div className="pitch-toolbar-actions">
+            <button type="button" onClick={exportLineupAsPng}>
+              {isExporting ? "Exporting..." : "Export PNG"}
+            </button>
+            {exportMessage ? (
+              <p className="copy-note export-note">{exportMessage}</p>
+            ) : null}
           </div>
         </div>
       </section>

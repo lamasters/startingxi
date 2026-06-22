@@ -48,6 +48,10 @@ p {
   align-items: start;
 }
 
+.app-heading {
+  grid-column: 1 / -1;
+}
+
 .control-panel {
   display: flex;
   flex-direction: column;
@@ -282,7 +286,7 @@ button.danger {
   border: 1px solid rgba(255, 255, 255, 0.34);
   color: #f6fff5;
   border-radius: 12px;
-  padding: 0.35rem;
+  padding: 0.3rem;
   backdrop-filter: blur(6px);
 }
 
@@ -425,6 +429,14 @@ button.danger {
     grid-template-columns: 1fr;
   }
 
+  .app-heading {
+    order: -2;
+  }
+
+  .pitch-panel {
+    order: -1;
+  }
+
   .players-card {
     max-height: none;
   }
@@ -434,8 +446,8 @@ button.danger {
   }
 
   .position-node {
-    width: clamp(78px, 16vw, 108px);
-    max-width: 19%;
+    width: clamp(106px, 22vw, 122px);
+    max-width: 22%;
   }
 
   .pitch-toolbar,
@@ -456,8 +468,8 @@ button.danger {
   }
 
   .position-node {
-    width: clamp(66px, 18vw, 84px);
-    max-width: 18.5%;
+    width: clamp(106px, 20vw, 122px);
+    max-width: 20%;
     padding: 0.28rem;
   }
 
