@@ -116,7 +116,6 @@ function slotLabelsForCount(count: number): string[] {
 
 function buildSlots(formation: string): Slot[] {
   const outfieldLines = parseFormation(formation);
-  const middleLineCount = Math.max(0, outfieldLines.length - 2);
   const pitchBottom = 74;
   const pitchTop = 22;
   const pitchStep =
