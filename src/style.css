@@ -172,9 +172,53 @@ button.danger {
   font-size: 0.84rem;
 }
 
+.player-preferred {
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  border-radius: 4px;
+  transition: background-color 150ms ease;
+}
+
+.player-preferred:hover {
+  background-color: var(--line);
+}
+
+.player-primary {
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  border-radius: 4px;
+  transition: background-color 150ms ease;
+}
+
+.player-primary:hover {
+  background-color: var(--line);
+}
+
+.player-preferred-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  background: #fcfffa;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-family: inherit;
+}
+
+.player-primary-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  background: #fcfffa;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-family: inherit;
+}
+
 .row-actions {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) auto auto;
+  grid-template-columns: auto auto;
   gap: 0.35rem;
 }
 
@@ -290,6 +334,8 @@ button.danger {
   border-radius: 12px;
   padding: 0.3rem;
   backdrop-filter: blur(6px);
+  user-select: none;
+  transition: box-shadow 150ms ease, border-color 150ms ease;
 }
 
 .position-node header {
@@ -297,6 +343,37 @@ button.danger {
   letter-spacing: 0.05em;
   margin-bottom: 0.2rem;
   font-weight: 700;
+}
+
+.position-label {
+  cursor: pointer;
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+  padding: 0.1rem;
+  border-radius: 4px;
+  transition: background-color 150ms ease;
+}
+
+.position-label:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.position-label-input {
+  display: block;
+  width: 100%;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+  padding: 0.2rem 0.3rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: #f6fff5;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  font-family: inherit;
 }
 
 .position-node ul {

@@ -34,6 +34,8 @@ type ShareableLineupState = {
   }>;
   assignments: AssignmentMap;
   benched: string[];
+  positionOffsets?: Record<string, number>;
+  customLabels?: Record<string, string>;
 };
 
 type InitialLineupState = {
@@ -41,6 +43,8 @@ type InitialLineupState = {
   players: Player[];
   manualAssignments: AssignmentMap;
   benchedPlayerIds: string[];
+  positionOffsets: Record<string, number>;
+  customLabels: Record<string, string>;
 };
 
 const FORMATIONS = [
@@ -53,6 +57,39 @@ const FORMATIONS = [
 ] as const;
 const SHARE_PARAM = "lineup";
 const DEFAULT_FORMATION = "4-4-2";
+
+const FORMATION_POSITIONS: Record<string, Record<string, string[]>> = {
+  "4-4-2": {
+    D: ["LB", "LCB", "RCB", "RB"],
+    M: ["LM", "LCM", "RCM", "RM"],
+    F: ["LS", "RS"],
+  },
+  "4-3-3": {
+    D: ["LB", "LCB", "RCB", "RB"],
+    M: ["DM", "LCM", "RCM"],
+    F: ["LW", "ST", "RW"],
+  },
+  "3-4-3": {
+    D: ["LCB", "CB", "RCB"],
+    M: ["LWB", "LCM", "RCM", "RWB"],
+    F: ["LW", "ST", "RW"],
+  },
+  "4-2-3-1": {
+    D: ["LB", "LCB", "RCB", "RB"],
+    M: ["LDM", "RDM", "LAM", "AM", "RAM"],
+    F: ["ST"],
+  },
+  "3-5-2": {
+    D: ["LCB", "CB", "RCB"],
+    M: ["LWB", "LCM", "AM", "RCM", "RWB"],
+    F: ["LS", "RS"],
+  },
+  "5-3-2": {
+    D: ["LWB", "LCB", "CB", "RCB", "RWB"],
+    M: ["LCM", "DM", "RCM"],
+    F: ["LS", "RS"],
+  },
+};
 
 const SIDE_LABELS: Record<number, string[]> = {
   1: ["C"],
@@ -98,9 +135,10 @@ function buildSlots(formation: string): Slot[] {
     },
   ];
 
+  const formationPositions = FORMATION_POSITIONS[formation];
+
   outfieldLines.forEach((count, lineIndex) => {
     let role: Role;
-    let lineRoleIndex = 1;
 
     if (lineIndex === 0) {
       role = "D";
@@ -108,24 +146,29 @@ function buildSlots(formation: string): Slot[] {
       role = "F";
     } else {
       role = "M";
-      lineRoleIndex = lineIndex;
     }
 
     const y = pitchBottom - pitchStep * lineIndex;
-    const labels = slotLabelsForCount(count);
+    const labels = formationPositions
+      ? formationPositions[role]
+      : slotLabelsForCount(count);
 
     labels.forEach((positionLabel, playerIndex) => {
-      const x = count === 1 ? 50 : 12 + playerIndex * (76 / (count - 1));
-      const midfieldCodePrefix =
-        middleLineCount > 1 && role === "M" ? `M${lineRoleIndex}` : "M";
-      const rolePrefix = role === "M" ? midfieldCodePrefix : role;
-      const code = `${rolePrefix}-${positionLabel}`;
+      let x: number;
+      if (count === 1) {
+        x = 50;
+      } else if (role === "F" && count === 2) {
+        // Bring 2 strikers closer to center (35 and 65 instead of 12 and 88)
+        x = 35 + playerIndex * 30;
+      } else {
+        x = 12 + playerIndex * (76 / (count - 1));
+      }
 
       slots.push({
-        id: `${rolePrefix}-${positionLabel}`,
-        code,
+        id: positionLabel,
+        code: positionLabel,
         role,
-        label: `${rolePrefix} ${positionLabel}`,
+        label: positionLabel,
         x,
         y,
       });
@@ -207,6 +250,8 @@ function parseInitialLineupState(): InitialLineupState {
     players: [],
     manualAssignments: {},
     benchedPlayerIds: [],
+    positionOffsets: {},
+    customLabels: {},
   };
 
   try {
@@ -280,11 +325,31 @@ function parseInitialLineupState(): InitialLineupState {
         )
       : [];
 
+    const positionOffsets =
+      payload.positionOffsets && typeof payload.positionOffsets === "object"
+        ? Object.fromEntries(
+            Object.entries(payload.positionOffsets).filter(
+              ([, value]) => typeof value === "number",
+            ),
+          )
+        : {};
+
+    const customLabels =
+      payload.customLabels && typeof payload.customLabels === "object"
+        ? Object.fromEntries(
+            Object.entries(payload.customLabels).filter(
+              ([, value]) => typeof value === "string",
+            ),
+          )
+        : {};
+
     return {
       formation,
       players: parsedPlayers,
       manualAssignments,
       benchedPlayerIds,
+      positionOffsets,
+      customLabels,
     };
   } catch {
     return defaultState;
@@ -292,7 +357,11 @@ function parseInitialLineupState(): InitialLineupState {
 }
 
 function encodeShareableLineupState(
-  state: InitialLineupState & { benchedPlayerIds: string[] },
+  state: InitialLineupState & {
+    benchedPlayerIds: string[];
+    positionOffsets: Record<string, number>;
+    customLabels: Record<string, string>;
+  },
 ): string {
   const payload: ShareableLineupState = {
     v: 1,
@@ -305,6 +374,8 @@ function encodeShareableLineupState(
     })),
     assignments: state.manualAssignments,
     benched: state.benchedPlayerIds,
+    positionOffsets: state.positionOffsets,
+    customLabels: state.customLabels,
   };
 
   return toBase64Url(JSON.stringify(payload));
@@ -400,7 +471,27 @@ function App() {
   const [copyMessage, setCopyMessage] = useState("");
   const [exportMessage, setExportMessage] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [positionOffsets, setPositionOffsets] = useState<
+    Record<string, number>
+  >(initialState.positionOffsets);
+  const [draggingSlotId, setDraggingSlotId] = useState<string | null>(null);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState("");
+  const [customLabels, setCustomLabels] = useState<Record<string, string>>(
+    initialState.customLabels,
+  );
+  const [editingPlayerPreferredId, setEditingPlayerPreferredId] = useState<
+    string | null
+  >(null);
+  const [editingPlayerPreferredText, setEditingPlayerPreferredText] =
+    useState("");
+  const [editingPlayerPrimaryId, setEditingPlayerPrimaryId] = useState<
+    string | null
+  >(null);
+  const [editingPlayerPrimaryText, setEditingPlayerPrimaryText] = useState("");
   const exportRef = useRef<HTMLDivElement | null>(null);
+  const labelInputRef = useRef<HTMLInputElement | null>(null);
 
   const slots = useMemo(() => buildSlots(formation), [formation]);
 
@@ -442,12 +533,21 @@ function App() {
       players,
       manualAssignments: safeAssignments,
       benchedPlayerIds,
+      positionOffsets,
+      customLabels,
     });
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set(SHARE_PARAM, encodedState);
     window.history.replaceState({}, "", nextUrl);
     setShareUrl(nextUrl.toString());
-  }, [formation, players, manualAssignments, benchedPlayerIds]);
+  }, [
+    formation,
+    players,
+    manualAssignments,
+    benchedPlayerIds,
+    positionOffsets,
+    customLabels,
+  ]);
 
   const benchedSet = useMemo(
     () => new Set(benchedPlayerIds),
@@ -585,6 +685,142 @@ function App() {
     }
   }
 
+  function handleNodeMouseDown(
+    event: React.MouseEvent<HTMLElement>,
+    slotId: string,
+  ) {
+    // Don't start drag if clicking the remove button
+    if ((event.target as HTMLElement).tagName === "BUTTON") {
+      return;
+    }
+    setDraggingSlotId(slotId);
+    setDragStartY(event.clientY);
+  }
+
+  useEffect(() => {
+    if (!draggingSlotId) return;
+
+    function handleMouseMove(event: MouseEvent) {
+      const deltaY = event.clientY - dragStartY;
+      // Convert pixel movement to percentage (constrain to ±10%)
+      const maxOffset = 10;
+      const offset = Math.max(-maxOffset, Math.min(maxOffset, deltaY / 50));
+
+      setPositionOffsets((current) => ({
+        ...current,
+        [draggingSlotId ?? ""]: offset,
+      }));
+    }
+
+    function handleMouseUp() {
+      setDraggingSlotId(null);
+    }
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [draggingSlotId, dragStartY]);
+
+  function startEditingLabel(slotId: string, currentLabel: string) {
+    setEditingSlotId(slotId);
+    setEditingLabel(currentLabel);
+  }
+
+  function saveLabel(slotId: string) {
+    if (editingLabel.trim()) {
+      setCustomLabels((current) => ({
+        ...current,
+        [slotId]: editingLabel.trim(),
+      }));
+    }
+    setEditingSlotId(null);
+    setEditingLabel("");
+  }
+
+  function handleLabelKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+    slotId: string,
+  ) {
+    if (event.key === "Enter") {
+      saveLabel(slotId);
+    } else if (event.key === "Escape") {
+      setEditingSlotId(null);
+      setEditingLabel("");
+    }
+  }
+
+  useEffect(() => {
+    if (editingSlotId !== null && labelInputRef.current) {
+      labelInputRef.current.select();
+    }
+  }, [editingSlotId]);
+
+  function startEditingPreferred(playerId: string, currentPreferred: string[]) {
+    setEditingPlayerPreferredId(playerId);
+    setEditingPlayerPreferredText(currentPreferred.join(", "));
+  }
+
+  function savePreferred(playerId: string) {
+    const normalized = normalizePreferredPositions(editingPlayerPreferredText);
+    setPlayers((current) =>
+      current.map((player) =>
+        player.id === playerId
+          ? { ...player, preferredPositions: normalized }
+          : player,
+      ),
+    );
+    setEditingPlayerPreferredId(null);
+    setEditingPlayerPreferredText("");
+  }
+
+  function handlePreferredKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+    playerId: string,
+  ) {
+    if (event.key === "Enter") {
+      savePreferred(playerId);
+    } else if (event.key === "Escape") {
+      setEditingPlayerPreferredId(null);
+      setEditingPlayerPreferredText("");
+    }
+  }
+
+  function startEditingPrimary(playerId: string, currentPrimary: string) {
+    setEditingPlayerPrimaryId(playerId);
+    setEditingPlayerPrimaryText(currentPrimary);
+  }
+
+  function savePrimary(playerId: string) {
+    const normalized = normalizePositionCode(editingPlayerPrimaryText);
+    if (normalized) {
+      setPlayers((current) =>
+        current.map((player) =>
+          player.id === playerId
+            ? { ...player, primaryPosition: normalized }
+            : player,
+        ),
+      );
+    }
+    setEditingPlayerPrimaryId(null);
+    setEditingPlayerPrimaryText("");
+  }
+
+  function handlePrimaryKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+    playerId: string,
+  ) {
+    if (event.key === "Enter") {
+      savePrimary(playerId);
+    } else if (event.key === "Escape") {
+      setEditingPlayerPrimaryId(null);
+      setEditingPlayerPrimaryText("");
+    }
+  }
+
   return (
     <main className="app-shell">
       <div className="app-heading">
@@ -709,63 +945,96 @@ function App() {
             <ul className="player-list">
               {players
                 .toSorted((a, b) => a.name.localeCompare(b.name))
-                .map((player) => (
-                  <li key={player.id}>
-                    <div>
-                      <strong>{player.name}</strong>
-                      <span>Primary: {player.primaryPosition}</span>
-                      <span>
-                        Preferred:{" "}
-                        {player.preferredPositions.length > 0
-                          ? player.preferredPositions.join(", ")
-                          : "None"}
-                      </span>
-                    </div>
-                    <div className="row-actions">
-                      <select
-                        value={
-                          slotCodes.includes(player.primaryPosition)
-                            ? player.primaryPosition
-                            : slotCodes[0]
-                        }
-                        onChange={(event) => {
-                          const nextPosition = event.target.value;
-                          setPlayers((current) =>
-                            current.map((item) =>
-                              item.id === player.id
-                                ? {
-                                    ...item,
-                                    primaryPosition: nextPosition,
-                                  }
-                                : item,
-                            ),
-                          );
-                        }}
-                      >
-                        {slotCodes.map((position) => (
-                          <option key={position} value={position}>
-                            {position}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          assignPlayer(player.id, player.primaryPosition)
-                        }
-                      >
-                        Assign
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        onClick={() => removePlayer(player.id)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                .map((player) => {
+                  const isEditingPreferred =
+                    editingPlayerPreferredId === player.id;
+                  const isEditingPrimary = editingPlayerPrimaryId === player.id;
+                  return (
+                    <li key={player.id}>
+                      <div>
+                        <strong>{player.name}</strong>
+                        {isEditingPrimary ? (
+                          <input
+                            autoFocus
+                            type="text"
+                            className="player-primary-input"
+                            value={editingPlayerPrimaryText}
+                            onChange={(event) =>
+                              setEditingPlayerPrimaryText(event.target.value)
+                            }
+                            onBlur={() => savePrimary(player.id)}
+                            onKeyDown={(event) =>
+                              handlePrimaryKeyDown(event, player.id)
+                            }
+                            placeholder="e.g. ST"
+                          />
+                        ) : (
+                          <span
+                            className="player-primary"
+                            onClick={() =>
+                              startEditingPrimary(
+                                player.id,
+                                player.primaryPosition,
+                              )
+                            }
+                            title="Click to edit"
+                          >
+                            Primary: {player.primaryPosition}
+                          </span>
+                        )}
+                        {isEditingPreferred ? (
+                          <input
+                            autoFocus
+                            type="text"
+                            className="player-preferred-input"
+                            value={editingPlayerPreferredText}
+                            onChange={(event) =>
+                              setEditingPlayerPreferredText(event.target.value)
+                            }
+                            onBlur={() => savePreferred(player.id)}
+                            onKeyDown={(event) =>
+                              handlePreferredKeyDown(event, player.id)
+                            }
+                            placeholder="e.g. M-C, M-R, F-C"
+                          />
+                        ) : (
+                          <span
+                            className="player-preferred"
+                            onClick={() =>
+                              startEditingPreferred(
+                                player.id,
+                                player.preferredPositions,
+                              )
+                            }
+                            title="Click to edit"
+                          >
+                            Preferred:{" "}
+                            {player.preferredPositions.length > 0
+                              ? player.preferredPositions.join(", ")
+                              : "None"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="row-actions">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            assignPlayer(player.id, player.primaryPosition)
+                          }
+                        >
+                          Assign
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={() => removePlayer(player.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
             </ul>
           )}
         </div>
@@ -791,14 +1060,43 @@ function App() {
 
             {slots.map((slot) => {
               const positionedPlayers = lineup.bySlot[slot.id] ?? [];
+              const offset = positionOffsets[slot.id] ?? 0;
+              const displayLabel = customLabels[slot.id] ?? slot.code;
+              const isEditing = editingSlotId === slot.id;
+
               return (
                 <article
                   key={slot.id}
                   className="position-node"
-                  style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                  style={{
+                    left: `${slot.x}%`,
+                    top: `${slot.y + offset}%`,
+                    cursor: draggingSlotId === slot.id ? "grabbing" : "grab",
+                  }}
                   aria-label={`${slot.code} position`}
+                  onMouseDown={(event) => handleNodeMouseDown(event, slot.id)}
                 >
-                  <header>{slot.code}</header>
+                  {isEditing ? (
+                    <input
+                      ref={labelInputRef}
+                      autoFocus
+                      type="text"
+                      className="position-label-input"
+                      value={editingLabel}
+                      onChange={(event) => setEditingLabel(event.target.value)}
+                      onBlur={() => saveLabel(slot.id)}
+                      onKeyDown={(event) => handleLabelKeyDown(event, slot.id)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  ) : (
+                    <header
+                      onClick={() => startEditingLabel(slot.id, displayLabel)}
+                      className="position-label"
+                      title="Click to edit"
+                    >
+                      {displayLabel}
+                    </header>
+                  )}
                   <ul>
                     {positionedPlayers.length === 0 ? (
                       <li className="placeholder">Open</li>
