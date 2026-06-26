@@ -638,6 +638,36 @@ function App() {
     );
   }
 
+  function movePlayerUp(slotId: string, playerId: string) {
+    setManualAssignments((current) => {
+      const ids = current[slotId] ?? [];
+      const index = ids.indexOf(playerId);
+      if (index <= 0) return current;
+
+      const newIds = [...ids];
+      [newIds[index - 1], newIds[index]] = [newIds[index], newIds[index - 1]];
+      return {
+        ...current,
+        [slotId]: newIds,
+      };
+    });
+  }
+
+  function movePlayerDown(slotId: string, playerId: string) {
+    setManualAssignments((current) => {
+      const ids = current[slotId] ?? [];
+      const index = ids.indexOf(playerId);
+      if (index < 0 || index >= ids.length - 1) return current;
+
+      const newIds = [...ids];
+      [newIds[index], newIds[index + 1]] = [newIds[index + 1], newIds[index]];
+      return {
+        ...current,
+        [slotId]: newIds,
+      };
+    });
+  }
+
   function submitAssignment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!assignmentPlayerId || !assignmentPosition) {
@@ -1100,7 +1130,7 @@ function App() {
                     {positionedPlayers.length === 0 ? (
                       <li className="placeholder">Open</li>
                     ) : (
-                      positionedPlayers.map((player) => (
+                      positionedPlayers.map((player, playerIndex) => (
                         <li key={player.id}>
                           <span className="player-name-wrap">
                             <span className="player-name" tabIndex={0}>
@@ -1110,12 +1140,42 @@ function App() {
                               Preferred: {preferredPositionsLabel(player)}
                             </span>
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => unassignPlayer(slot.id, player.id)}
-                          >
-                            x
-                          </button>
+                          <div className="player-actions">
+                            {positionedPlayers.length > 1 && (
+                              <>
+                                {playerIndex > 0 && (
+                                  <button
+                                    type="button"
+                                    title="Move up"
+                                    onClick={() =>
+                                      movePlayerUp(slot.id, player.id)
+                                    }
+                                    className="order-button"
+                                  >
+                                    ↑
+                                  </button>
+                                )}
+                                {playerIndex < positionedPlayers.length - 1 && (
+                                  <button
+                                    type="button"
+                                    title="Move down"
+                                    onClick={() =>
+                                      movePlayerDown(slot.id, player.id)
+                                    }
+                                    className="order-button"
+                                  >
+                                    ↓
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => unassignPlayer(slot.id, player.id)}
+                            >
+                              x
+                            </button>
+                          </div>
                         </li>
                       ))
                     )}

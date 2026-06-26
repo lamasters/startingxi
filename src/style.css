@@ -390,6 +390,7 @@ button.danger {
   background: rgba(255, 255, 255, 0.14);
   padding: 0.18rem 0.3rem;
   border-radius: 8px;
+  min-width: 0;
 }
 
 .player-name-wrap {
@@ -397,6 +398,7 @@ button.danger {
   display: inline-flex;
   align-items: center;
   min-width: 0;
+  flex: 1;
 }
 
 .player-name {
@@ -465,6 +467,28 @@ button.danger {
   height: 1.25rem;
   padding: 0;
   line-height: 1;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.position-node li button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.65);
+}
+
+.player-actions {
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.order-button {
+  font-size: 0.65rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
 }
 
 .is-exporting .position-node li button {
